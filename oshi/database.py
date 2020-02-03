@@ -4,6 +4,7 @@ Database abstraction
 import json
 import re
 import gzip
+from typing import Iterable
 from os import path
 from lxml import etree
 
@@ -16,6 +17,14 @@ class Database:
     """
     def __init__(self, entries):
         self.entries = entries
+    def search(self, term) -> Iterable:
+        """
+        Returns entries that contain the term in its writings
+        """
+        for entry in self.entries:
+            if any(term in writing for writing in entry["writings"]):
+                yield entry
+
 
 def connect(filename=DATABASE_FILENAME):
     """
