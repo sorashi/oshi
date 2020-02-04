@@ -64,8 +64,9 @@ def parse_rules(filename=RULES_FILENAME):
             pos_globs = pos_globs.split()
             # role and pos are optional
             # pattern and target_pattern can be empty
-            assert "" not in [rule, target]
-            assert len(pos_globs) > 0
+            # rule, target and globs are required
+            if "" in [rule, target] or len(pos_globs) <= 0:
+                raise SyntaxError("Error parsing line {}: {}".format(line_number, line))
             role = None if role == "" else role
             pos = None if pos == "" else pos
             if len(pattern) <= 0 or pattern[0] not in VOWEL_KATAKANA:
@@ -85,6 +86,51 @@ def parse_rules(filename=RULES_FILENAME):
                                       re.sub(expansion_regex, SOUND_CHANGE[sound_target][i], target_pattern),
                                       pos_globs))
         return rules
+
+def grammar_lookup(rules: List[Rule], expression: str, tags: List[str] = ["*"], role: str = None, path: List = []):
+    """
+    Recursively looks up what form is the expression in
+    Top level call: grammar_lookup(rules, expression)
+    rules - list of grammar rules to use for lookup
+    expression - a conjugated Japanese expression
+    tags - list of glob patterns for possible tags of the expression
+    role - grammatical role of the current expression (None=any role)
+    path - holds the traversed path to the current expression
+    """
+    # find applicable rules
+    applicable = set()
+    for rule in rules:
+        if role not in [None, rule.role]:
+            continue # skip rules with unmatching role
+        if not expression.endswith(rule.pattern):
+            continue # skip rules with unmatching pattern
+        # take rules that contain a matching tag
+        for tag in tags:
+            # tag is a glob pattern
+            if rule.pos and fnmatch(rule.pos, tag):
+                applicable.add((expression[:len(rule.pattern)]+rule.target_pattern, [rule.pos], rule.traget))
+                break
+            elif not rule.pos:
+                for pos in rule.pos_globs:
+                    if fnmatch(pos, tag):
+                        applicable.add((expression[:-len(rule.pattern)] + rule.target_pattern, rule.pos_globs[:], rule.traget))
+                        break
+            else:
+                pass # explicit, so that it is clear
+    if len(applicable) == 0:
+        print("dead end")
+        return None
+    for rule in applicable:
+        result = grammar_lookup(rules, rule[0], rule[1], rule[2], path + [rule])
+        if result:
+            return result
+    return None # can be shortened
+
+
+
 if __name__ == "__main__":
-    for rule in parse_rules():
-        print(repr(rule))
+    # for rule in parse_rules():
+    #     print(repr(rule))
+    rules = parse_rules()
+    result = grammar_lookup(rules, "書いてた")
+    pass
