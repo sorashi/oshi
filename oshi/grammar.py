@@ -88,7 +88,7 @@ def parse_rules(filename=RULES_FILENAME):
                                       pos_globs))
         return rules
 
-def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None, tags: List[str] = ["*"], role: str = None, path: List = []):
+def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None, tags: List[str] = ["*"], role: str = None, path: List = [], verbous=False):
     """
     Recursively looks up what form is the expression in
     Top level call: grammar_lookup(rules, expression)
@@ -98,7 +98,9 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
     role - grammatical role of the current expression (None=any role)
     path - holds the traversed path to the current expression
     """
-    print("({}, {}, {}):::::::::".format(expression, " ".join(tags), role))
+    path = path + [(expression, " ".join(tags), role)]
+    if verbous:
+        print("{}({}, {}, {}):::::::::".format("\t" * (len(path)-1), expression, " ".join(tags), role))
     if len(path) > 10:
         #  raise RuntimeError()
         return None
@@ -113,23 +115,24 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
         for tag in tags:
             # tag is a glob pattern
             if rule.pos and fnmatch(rule.pos, tag):
-                print(rule, end=" => ")
                 app = (expression[:len(expression)-len(rule.pattern)]+rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget)
-                print(app)
+                if verbous:
+                    print("\t"*(len(path)-1) + str(rule) + " => " + str(app))
                 applicable.add(app)
                 break
             elif not rule.pos:
                 for pos in rule.pos_globs:
                     if fnmatch(pos, tag):
-                        print(rule, end=" => ")
                         app = (expression[:len(expression)-len(rule.pattern)] + rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget)
-                        print(app)
+                        if verbous:
+                            print("\t"*(len(path)-1) + str(rule) + " => " + str(app))
                         applicable.add(app)
                         break
             else:
                 pass # explicit, so that it is clear
     if len(applicable) == 0:
-        print("dead end")
+        if verbous:
+            print("\t"*(len(path)-1) + "dead end")
         return None
     for rule in applicable:
         if rule[2] == "plain":
@@ -137,7 +140,7 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
                 return path + [rule]
             if db.find_exact(rule[0]):
                 return path + [rule]
-        result = grammar_lookup(rules, rule[0], db, rule[1].split(), rule[2], path + [rule])
+        result = grammar_lookup(rules, rule[0], db, rule[1].split(), rule[2], path, verbous)
         if result:
             return result
     return None # can be shortened
@@ -149,7 +152,7 @@ if __name__ == "__main__":
     #     print(repr(rule))
     rules = parse_rules()
     db = database.connect()
-    result = grammar_lookup(rules, "書いてた", db)
+    result = grammar_lookup(rules, "書いてた", db, verbous=True)
     print(result)
     pass
 
