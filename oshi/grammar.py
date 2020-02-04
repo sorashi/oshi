@@ -98,13 +98,14 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
     role - grammatical role of the current expression (None=any role)
     path - holds the traversed path to the current expression
     """
+    print("({}, {}, {}):::::::::".format(expression, " ".join(tags), role))
     if len(path) > 10:
         #  raise RuntimeError()
         return None
     # find applicable rules
     applicable = set()
     for rule in rules:
-        if role not in [None, rule.role]:
+        if role not in [None, rule.rule, rule.role]:
             continue # skip rules with unmatching role
         if not expression.endswith(rule.pattern):
             continue # skip rules with unmatching pattern
@@ -112,17 +113,23 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
         for tag in tags:
             # tag is a glob pattern
             if rule.pos and fnmatch(rule.pos, tag):
-                applicable.add((expression[:len(expression)-len(rule.pattern)]+rule.target_pattern, rule.pos, rule.traget))
+                print(rule, end=" => ")
+                app = (expression[:len(expression)-len(rule.pattern)]+rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget)
+                print(app)
+                applicable.add(app)
                 break
             elif not rule.pos:
                 for pos in rule.pos_globs:
                     if fnmatch(pos, tag):
-                        applicable.add((expression[:len(expression)-len(rule.pattern)] + rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget))
+                        print(rule, end=" => ")
+                        app = (expression[:len(expression)-len(rule.pattern)] + rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget)
+                        print(app)
+                        applicable.add(app)
                         break
             else:
                 pass # explicit, so that it is clear
     if len(applicable) == 0:
-        print(path)
+        print("dead end")
         return None
     for rule in applicable:
         if rule[2] == "plain":
@@ -143,6 +150,7 @@ if __name__ == "__main__":
     rules = parse_rules()
     db = database.connect()
     result = grammar_lookup(rules, "書いてた", db)
+    print(result)
     pass
 
 """
