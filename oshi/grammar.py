@@ -2,6 +2,7 @@ import re
 from os import path
 from fnmatch import fnmatch # fnmatch(test_string, glob_pattern)
 from typing import List
+import database
 
 RULE_REGEX = r'^(\S+)\s*(\S*)\s+〜(\S*)\s*(\S*)\s+for\s+(\S*)\s+〜(\S*) +((?:[ \t]*\S+)+)\s*$'
 
@@ -87,7 +88,7 @@ def parse_rules(filename=RULES_FILENAME):
                                       pos_globs))
         return rules
 
-def grammar_lookup(rules: List[Rule], expression: str, tags: List[str] = ["*"], role: str = None, path: List = []):
+def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None, tags: List[str] = ["*"], role: str = None, path: List = []):
     """
     Recursively looks up what form is the expression in
     Top level call: grammar_lookup(rules, expression)
@@ -97,6 +98,9 @@ def grammar_lookup(rules: List[Rule], expression: str, tags: List[str] = ["*"], 
     role - grammatical role of the current expression (None=any role)
     path - holds the traversed path to the current expression
     """
+    if len(path) > 10:
+        #  raise RuntimeError()
+        return None
     # find applicable rules
     applicable = set()
     for rule in rules:
@@ -108,20 +112,25 @@ def grammar_lookup(rules: List[Rule], expression: str, tags: List[str] = ["*"], 
         for tag in tags:
             # tag is a glob pattern
             if rule.pos and fnmatch(rule.pos, tag):
-                applicable.add((expression[:len(rule.pattern)]+rule.target_pattern, [rule.pos], rule.traget))
+                applicable.add((expression[:len(expression)-len(rule.pattern)]+rule.target_pattern, rule.pos, rule.traget))
                 break
             elif not rule.pos:
                 for pos in rule.pos_globs:
                     if fnmatch(pos, tag):
-                        applicable.add((expression[:-len(rule.pattern)] + rule.target_pattern, rule.pos_globs[:], rule.traget))
+                        applicable.add((expression[:len(expression)-len(rule.pattern)] + rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget))
                         break
             else:
                 pass # explicit, so that it is clear
     if len(applicable) == 0:
-        print("dead end")
+        print(path)
         return None
     for rule in applicable:
-        result = grammar_lookup(rules, rule[0], rule[1], rule[2], path + [rule])
+        if rule[2] == "plain":
+            if not db:
+                return path + [rule]
+            if db.find_exact(rule[0]):
+                return path + [rule]
+        result = grammar_lookup(rules, rule[0], db, rule[1].split(), rule[2], path + [rule])
         if result:
             return result
     return None # can be shortened
@@ -132,5 +141,17 @@ if __name__ == "__main__":
     # for rule in parse_rules():
     #     print(repr(rule))
     rules = parse_rules()
-    result = grammar_lookup(rules, "書いてた")
+    db = database.connect()
+    result = grammar_lookup(rules, "書いてた", db)
     pass
+
+"""
+'(書いてた, *, None)': '(書いてつ, v5[^r]* v5r vs-c, plain) (書いてつ, v1, plain) (書いてる, v1*, plain)'
+'(書いてつ, v5[^r]* v5r vs-c, plain)': X
+'(書いてつ, v1, plain)': X
+'(書いてる, v1*, plain)': '(書いている, v1, continuous)' => X /// should create (書いて, v[15]* vk vs-*, て-form)
+continuous plain 〜いる v1 for て-form 〜 v[15]* vk vs-*
+^^^^^^      ^------------ so what is this?!
+this should be used
+
+"""
