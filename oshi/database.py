@@ -6,7 +6,7 @@ import re
 import gzip
 from typing import Iterable
 from os import path
-from lxml import etree
+from xml.etree import ElementTree as etree
 
 CURRENT_DIRECTORY = path.dirname(__file__)
 DATABASE_FILENAME = path.join(CURRENT_DIRECTORY, 'oshi_database.json')
@@ -24,6 +24,11 @@ class Database:
         for entry in self.entries:
             if any(term in writing for writing in entry["writings"]):
                 yield entry
+    def find_exact(self, expression, tag="*"):
+        for entry in self.entries:
+            if any(expression == writing for writing in entry["writings"]):
+                return entry
+        return None
 
 
 def connect(filename=DATABASE_FILENAME):

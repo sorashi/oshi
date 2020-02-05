@@ -90,20 +90,20 @@ def parse_rules(filename=RULES_FILENAME):
 
 def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None, tags: List[str] = ["*"], role: str = None, path: List = [], verbous=False):
     """
-    Recursively looks up what form is the expression in
+    Recursively looks up what form the expression is in
     Top level call: grammar_lookup(rules, expression)
     rules - list of grammar rules to use for lookup
     expression - a conjugated Japanese expression
     tags - list of glob patterns for possible tags of the expression
-    role - grammatical role of the current expression (None=any role)
+    role - grammatical role of the current expression (for example "plain", "past", or None = any role)
     path - holds the traversed path to the current expression
     """
-    path = path + [(expression, " ".join(tags), role)]
+    if len(path) <= 0:
+        path = [(expression, " ".join(tags), role)]
     if verbous:
         print("{}({}, {}, {}):::::::::".format("\t" * (len(path)-1), expression, " ".join(tags), role))
-    if len(path) > 10:
-        #  raise RuntimeError()
-        return None
+    if len(path) > 20:
+        raise RuntimeError("Possible recursion loop (limit reached)")
     # find applicable rules
     applicable = set()
     for rule in rules:
@@ -115,18 +115,12 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
         for tag in tags:
             # tag is a glob pattern
             if rule.pos and fnmatch(rule.pos, tag):
-                app = (expression[:len(expression)-len(rule.pattern)]+rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget)
-                if verbous:
-                    print("\t"*(len(path)-1) + str(rule) + " => " + str(app))
-                applicable.add(app)
+                applicable.add(rule)
                 break
             elif not rule.pos:
                 for pos in rule.pos_globs:
                     if fnmatch(pos, tag):
-                        app = (expression[:len(expression)-len(rule.pattern)] + rule.target_pattern, " ".join(rule.pos_globs[:]), rule.traget)
-                        if verbous:
-                            print("\t"*(len(path)-1) + str(rule) + " => " + str(app))
-                        applicable.add(app)
+                        applicable.add(rule)
                         break
             else:
                 pass # explicit, so that it is clear
@@ -135,12 +129,16 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
             print("\t"*(len(path)-1) + "dead end")
         return None
     for rule in applicable:
-        if rule[2] == "plain":
-            if not db:
-                return path + [rule]
-            if db.find_exact(rule[0]):
-                return path + [rule]
-        result = grammar_lookup(rules, rule[0], db, rule[1].split(), rule[2], path, verbous)
+        new_expression = expression[:len(expression)-len(rule.pattern)] + rule.target_pattern
+        # this will be saved in the resulting path
+        node_representation = (new_expression, " ".join(rule.pos_globs[:]), rule.rule)
+        if verbous:
+            print("\t"*len(path) + str(rule))
+        if rule.traget == "plain":
+            entry = db.find_exact(new_expression)
+            if entry:
+                return path + [node_representation], entry
+        result = grammar_lookup(rules, new_expression, db, rule.pos_globs, rule.traget, path + [node_representation], verbous)
         if result:
             return result
     return None # can be shortened
@@ -152,17 +150,11 @@ if __name__ == "__main__":
     #     print(repr(rule))
     rules = parse_rules()
     db = database.connect()
-    result = grammar_lookup(rules, "書いてた", db, verbous=True)
-    print(result)
-    pass
-
-"""
-'(書いてた, *, None)': '(書いてつ, v5[^r]* v5r vs-c, plain) (書いてつ, v1, plain) (書いてる, v1*, plain)'
-'(書いてつ, v5[^r]* v5r vs-c, plain)': X
-'(書いてつ, v1, plain)': X
-'(書いてる, v1*, plain)': '(書いている, v1, continuous)' => X /// should create (書いて, v[15]* vk vs-*, て-form)
-continuous plain 〜いる v1 for て-form 〜 v[15]* vk vs-*
-^^^^^^      ^------------ so what is this?!
-this should be used
-
-"""
+    # 書いてた
+    path, entry = grammar_lookup(rules, "書いてた", db, verbous=True)
+    for i in range(len(path) - 1):
+        print("{}{} is {} for {}".format(" "*i, path[i][0], path[i+1][2], path[i+1][0]))
+    print("Dictionary entry for: {} {}".format(path[-1][0], path[-1][1]))
+    print(" ".join(entry["writings"]))
+    print(" ".join(entry["readings"]))
+    print(", ".join(entry["senses"][0]["glosses"]))
