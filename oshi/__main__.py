@@ -3,6 +3,7 @@ oshi -- Japanese grammar tester
 """
 import threading
 import database
+import grammar
 
 db = None
 def load_database():
@@ -22,7 +23,17 @@ def menu_search():
                 print("- " + ", ".join(sense["glosses"]))
 
 def menu_grammar():
-    print("grammar")
+    rules = grammar.parse_rules()
+    while True:
+        expression = input("g>> ").strip()
+        path, entry = grammar.lookup(rules, "書いてた", db, verbous=True)
+        for i in range(len(path) - 1):
+            print("{}{} is {} for {}".format(" "*i, path[i][0], path[i+1][2], path[i+1][0]))
+        print("Dictionary entry for: {} {}".format(path[-1][0], path[-1][1]))
+        print(" ".join(entry["writings"]))
+        print(" ".join(entry["readings"]))
+        print(", ".join(entry["senses"][0]["glosses"]))
+        
 
 def menu_help():
     print("help")
@@ -50,6 +61,6 @@ while True:
     elif choice == "h":
         menu_help()
     elif choice == "e":
-        break # or exit(0)?
+        exit(0)
     else:
         print("Unknown choice")

@@ -47,6 +47,12 @@ class Rule:
     def __repr__(self):
         return "{} {} ~{} {} for {} ~{} {}".format(self.rule, self.role, self.pattern, self.pos, self.traget, self.target_pattern, " ".join(self.pos_globs))
 
+def apply_rule_backward(expression: str, rule: Rule):
+    return expression[:len(expression)-len(rule.pattern)] + rule.target_pattern
+
+def apply_rule_forward(expression: str, rule: Rule):
+    return expression[:len(expression)-len(rule.target_pattern)] + rule.pattern
+
 def parse_rules(filename=RULES_FILENAME):
     rules = []
     with open(filename, 'r', encoding='utf-8') as f:
@@ -88,11 +94,11 @@ def parse_rules(filename=RULES_FILENAME):
                                       pos_globs))
         return rules
 
-def grammar_lookup(rules: List[Rule], expression: str, db: database.Database = None,
-                   tags: List[str] = ["*"], role: str = None, path: List = [], verbous = False):
+def lookup(rules: List[Rule], expression: str, db: database.Database = None,
+                   tags: List[str] = ["*"], role: str = None, path: List[Rule] = [], verbous = False):
     """
     Recursively looks up what form the expression is in
-    Top level call: grammar_lookup(rules, expression)
+    Top level call: lookup(rules, expression, database)
     rules - list of grammar rules to use for lookup
     expression - a conjugated Japanese expression
     db - a database.Database
@@ -155,7 +161,7 @@ def grammar_lookup(rules: List[Rule], expression: str, db: database.Database = N
             if entry:
                 # this node is the result
                 return path + [rule], entry
-        result = grammar_lookup(rules, new_expression, db,
+        result = lookup(rules, new_expression, db,
                                 rule.pos_globs, rule.traget, path + [rule], verbous)
         # if a result was found we return all the way up from this branch
         if result:
@@ -164,24 +170,16 @@ def grammar_lookup(rules: List[Rule], expression: str, db: database.Database = N
 
     return None # none of the applicable rules are correct
 
-def apply_rule_backward(expression: str, rule: Rule):
-    return expression[:len(expression)-len(rule.pattern)] + rule.target_pattern
-
-def apply_rule_forward(expression: str, rule: Rule):
-    return expression[:len(expression)-len(rule.target_pattern)] + rule.pattern
-
 if __name__ == "__main__":
     rules = parse_rules()
     db = database.connect()
     expression = "書いてた"
-    path, entry = grammar_lookup(rules, expression, db, verbous=True)
+    path, entry = lookup(rules, expression, db, verbous=True)
     t=0
     for rule in path:
         print("{}{} is {} for {}".format("\t"*t, expression, rule.rule, apply_rule_backward(expression, rule)))
         expression = apply_rule_backward(expression, rule)
         t+=1
-    # for i in range(len(path) - 1):
-    #     print("{}{} is {} for {}".format(" "*i, path[i][0], path[i+1][2], path[i+1][0]))
     print("Dictionary entry for: {} {}".format(expression, path[-1].pos_globs))
     print(" ".join(entry["writings"]))
     print(" ".join(entry["readings"]))
