@@ -26,14 +26,22 @@ def menu_grammar():
     rules = grammar.parse_rules()
     while True:
         expression = input("g>> ").strip()
-        path, entry = grammar.lookup(rules, "書いてた", db, verbous=True)
-        for i in range(len(path) - 1):
-            print("{}{} is {} for {}".format(" "*i, path[i][0], path[i+1][2], path[i+1][0]))
-        print("Dictionary entry for: {} {}".format(path[-1][0], path[-1][1]))
-        print(" ".join(entry["writings"]))
-        print(" ".join(entry["readings"]))
-        print(", ".join(entry["senses"][0]["glosses"]))
-        
+        path, entry = grammar.lookup(rules, expression, db, verbous=True) or (None, None)
+        if path is None:
+            print("Lookup failed, grammar form couldn't be recognized")
+            continue
+        t = 0
+        for rule in path:
+            print("{}{} is {} for {}".format("\t"*t, expression, rule.rule, grammar.apply_rule_backward(expression, rule)))
+            expression = grammar.apply_rule_backward(expression, rule)
+            t += 1
+        if len(path) <= 0:
+            print("Dictionary entry for " + expression)
+        else:
+            print("Dictionary entry for: {} {}".format(expression, " ".join(path[-1].pos_globs)))
+        print("\t" + " ".join(entry["writings"]))
+        print("\t" + " ".join(entry["readings"]))
+        print("\t" + ", ".join(entry["senses"][0]["glosses"]))
 
 def menu_help():
     print("help")

@@ -111,6 +111,10 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
     """
     if type(db) is not database.Database:
         raise ValueError("Database invalid")
+    if len(path) <= 0:
+        entry = db.find_exact(expression)
+        if entry:
+            return path, entry
     if verbous:
         print("{}::({}, {}, {})::::".format("\t" * len(path), expression, " ".join(tags), role))
     if len(path) > 20:
