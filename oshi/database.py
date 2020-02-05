@@ -45,7 +45,7 @@ class Database:
                 return entry_copy
         return None
 
-def entry_tostring(entry):
+def entry_tostring(entry: dict):
     result = ""
     result += " ".join(entry["writings"]) + "\n"
     result += " ".join(entry["readings"]) + "\n"

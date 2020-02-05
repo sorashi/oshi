@@ -109,7 +109,7 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
 
     retruns a tuple (path, database entry) or None if nothing was found
     """
-    if type(db) is not database.Database:
+    if not isinstance(db, database.Database):
         raise ValueError("Database invalid")
     if len(path) <= 0:
         entry = db.find_exact(expression)
@@ -146,7 +146,7 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
     for rule in applicable:
         # new expression is built by removing the suffix in the pattern and replacing it with
         # target_pattern, for example 書いてた -> 書いてる
-        new_expression = expression[:len(expression)-len(rule.pattern)] + rule.target_pattern
+        new_expression = apply_rule_backward(expression, rule)
         if verbous:
             print("  "*len(path) + str(rule))
         if rule.traget == "plain":
@@ -168,12 +168,10 @@ if __name__ == "__main__":
     db = database.connect()
     expression = "書いてた"
     path, entry = lookup(rules, expression, db, verbous=True)
-    t=0
+    t = 0
     for rule in path:
         print("{}{} is {} for {}".format("  "*t, expression, rule.rule, apply_rule_backward(expression, rule)))
         expression = apply_rule_backward(expression, rule)
-        t+=1
+        t += 1
     print("Dictionary entry for: {} {}".format(expression, path[-1].pos_globs))
-    print(" ".join(entry["writings"]))
-    print(" ".join(entry["readings"]))
-    print(", ".join(entry["senses"][0]["glosses"]))
+    print(database.entry_tostring(entry))
