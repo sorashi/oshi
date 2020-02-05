@@ -120,7 +120,7 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
     if len(path) > 20:
         raise RuntimeError("Possible recursion loop (depth limit reached)")
     # find applicable rules
-    applicable = set()
+    applicable = []
     for rule in rules:
         if rule in path:
             continue # skip rules that have already been used
@@ -134,7 +134,7 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
             found = False
             for tag_glob in tags:
                 if fnmatch(rule.pos, tag_glob):
-                    applicable.add(rule)
+                    applicable.append(rule)
                     found = True
                     break
             if found:
@@ -143,7 +143,7 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
             found = False
             for tag_glob in tags:
                 if fnmatch(pos_glob, tag_glob):
-                    applicable.add(rule)
+                    applicable.append(rule)
                     found = True
                     break
             if found:
