@@ -37,7 +37,7 @@ def connect(filename=DATABASE_FILENAME):
     """
     if not path.exists(filename):
         raise FileNotFoundError("Database file not found: " + filename)
-    with open(filename, 'r') as f:
+    with open(filename, 'r', encoding="utf-8") as f:
         return Database(json.load(f))
 
 def build(filename="JMdict_e.gz", output_filename=DATABASE_FILENAME):
@@ -72,5 +72,5 @@ def build(filename="JMdict_e.gz", output_filename=DATABASE_FILENAME):
             senses.append({"glosses": glosses, "tags": tags})
         entry["senses"] = senses
         entries.append(entry)
-    with open(output_filename, 'w') as f:
-        json.dump(entries, f)
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        json.dump(entries, f, ensure_ascii=False)
