@@ -1,6 +1,8 @@
 import json
 import re
 import gzip
+import copy
+from fnmatch import fnmatch
 from typing import Iterable
 from os import path
 from lxml import etree
@@ -11,6 +13,12 @@ DATABASE_FILENAME = path.join(CURRENT_DIRECTORY, 'oshi_database.json')
 class Database:
     """
     Represents a database connection
+    Database entry structure:
+        writings: List[str]
+        readings: List[str]
+        senses: List, each sense:
+            glosses: List[str]
+            tags: List[str]
     """
     def __init__(self, entries):
         self.entries = entries
@@ -20,12 +28,31 @@ class Database:
         """
         for entry in self.entries:
             if any(term in writing for writing in entry["writings"]):
-                yield entry
-    def find_exact(self, expression, tag="*"):
+                yield copy.deepcopy(entry)
+    def find_exact(self, expression, tag_glob="*"):
+        """
+        Finds and returns the first entry exactly matching expression and returns
+        a copy of the entry with only those senses have a tag match for tag_glob
+        Returns None if no entry was found
+        """
         for entry in self.entries:
             if any(expression == writing for writing in entry["writings"]):
-                return entry
+                entry_copy = copy.deepcopy(entry)
+                entry_copy["senses"] = list(
+                    filter(lambda sense: any(fnmatch(x, tag_glob)
+                           for x in sense["tags"]),
+                           entry_copy["senses"]))
+                return entry_copy
         return None
+
+def entry_tostring(entry):
+    result = ""
+    result += " ".join(entry["writings"]) + "\n"
+    result += " ".join(entry["readings"]) + "\n"
+    for sense in entry["senses"]:
+        result += "{}: {}\n".format(" ".join(sense["tags"]),
+                                    ", ".join(sense["glosses"]))
+    return result
 
 
 def connect(filename=DATABASE_FILENAME):

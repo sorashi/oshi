@@ -43,9 +43,7 @@ def menu_grammar():
             print("Dictionary entry for " + expression)
         else:
             print("Dictionary entry for: {} {}".format(expression, " ".join(path[-1].pos_globs)))
-        print("\t" + " ".join(entry["writings"]))
-        print("\t" + " ".join(entry["readings"]))
-        print("\t" + ", ".join(entry["senses"][0]["glosses"]))
+        print(database.entry_tostring(entry))
 
 def menu_help():
     print("help")
