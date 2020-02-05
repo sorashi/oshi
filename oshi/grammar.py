@@ -116,7 +116,7 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
         if entry:
             return path, entry
     if verbous:
-        print("{}::({}, {}, {})::::".format("\t" * len(path), expression, " ".join(tags), role))
+        print("{}::({}, {}, {})::::".format("  " * len(path), expression, " ".join(tags), role))
     if len(path) > 20:
         raise RuntimeError("Possible recursion loop (depth limit reached)")
     # find applicable rules
@@ -152,14 +152,14 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
     if len(applicable) == 0:
         # no applicable rules found
         if verbous:
-            print("\t"*len(path) + "dead end")
+            print("  "*len(path) + "dead end")
         return None
     for rule in applicable:
         # new expression is built by removing the suffix in the pattern and replacing it with
         # target_pattern, for example 書いてた -> 書いてる
         new_expression = expression[:len(expression)-len(rule.pattern)] + rule.target_pattern
         if verbous:
-            print("\t"*len(path) + str(rule))
+            print("  "*len(path) + str(rule))
         if rule.traget == "plain":
             entry = db.find_exact(new_expression)
             if entry:
@@ -181,7 +181,7 @@ if __name__ == "__main__":
     path, entry = lookup(rules, expression, db, verbous=True)
     t=0
     for rule in path:
-        print("{}{} is {} for {}".format("\t"*t, expression, rule.rule, apply_rule_backward(expression, rule)))
+        print("{}{} is {} for {}".format("  "*t, expression, rule.rule, apply_rule_backward(expression, rule)))
         expression = apply_rule_backward(expression, rule)
         t+=1
     print("Dictionary entry for: {} {}".format(expression, path[-1].pos_globs))

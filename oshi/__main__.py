@@ -24,15 +24,19 @@ def menu_search():
 
 def menu_grammar():
     rules = grammar.parse_rules()
+    print("Grammar mode. Type q or e at any time to exit")
     while True:
         expression = input("g>> ").strip()
-        path, entry = grammar.lookup(rules, expression, db, verbous=True) or (None, None)
+        if expression.lower().strip() in ["q", "e"]:
+            return
+        print("Recognizing...")
+        path, entry = grammar.lookup(rules, expression, db, verbous=False) or (None, None)
         if path is None:
             print("Lookup failed, grammar form couldn't be recognized")
             continue
         t = 0
         for rule in path:
-            print("{}{} is {} for {}".format("\t"*t, expression, rule.rule, grammar.apply_rule_backward(expression, rule)))
+            print("{}{} is {} for {}".format("  "*t, expression, rule.rule, grammar.apply_rule_backward(expression, rule)))
             expression = grammar.apply_rule_backward(expression, rule)
             t += 1
         if len(path) <= 0:
