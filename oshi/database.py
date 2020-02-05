@@ -1,12 +1,9 @@
-"""
-Database abstraction
-"""
 import json
 import re
 import gzip
 from typing import Iterable
 from os import path
-from xml.etree import ElementTree as etree
+from lxml import etree
 
 CURRENT_DIRECTORY = path.dirname(__file__)
 DATABASE_FILENAME = path.join(CURRENT_DIRECTORY, 'oshi_database.json')
@@ -46,12 +43,19 @@ def build(filename="JMdict_e.gz", output_filename=DATABASE_FILENAME):
     into output_filename
     Should be used from a command-line
     """
+    # NOTE: The JMdict XML file contains XML entities, that are expanded when
+    # parsed using Python's stdlib xml.etree.ElementTree like so:
+    # ElementTree.parse(f). That is undesired behavior for our use-case. Oshi
+    # needs to parse the short entity string, for example &adj-i; should be
+    # "adj-i" instead of "adjective (keiyoushi)". That's why it uses an external
+    # xml parser: lxml that allows you to specify whether to expand entites.
     extension = path.splitext(filename)[1].lower()
+    parser = etree.XMLParser(resolve_entities=False)
     if extension == ".gz":
         with gzip.open(filename) as f:
-            tree = etree.parse(f)
+            tree = etree.parse(f, parser)
     elif extension == ".xml":
-        tree = etree.parse(filename)
+        tree = etree.parse(filename, parser)
     else:
         raise ValueError("File extension not supported: " + extension)
 
@@ -63,14 +67,22 @@ def build(filename="JMdict_e.gz", output_filename=DATABASE_FILENAME):
         entry["readings"] = [x.find('reb').text for x in xentry.findall('r_ele')]
         xsenses = xentry.findall('sense')
         senses = []
+        # last_tags will contain a reference to previously found tags (JMdict
+        # specifies that when pos is empty, the previous one should be used)
+        last_tags = []
         for xsense in xsenses:
             tags = []
-            for xtag in xsense.findall('pos') + xsense.findall('misc'):
-                for match in re.search(r'&(.*?);', xtag.text) or []:
-                    tags.append(match)
+            xtags = xsense.findall('pos') # + xsense.findall('misc')
+            for xtag in xtags:
+                match = re.search(r'&([\w-]+?);', etree.tostring(xtag, encoding="utf-8").decode('utf-8') or "")
+                if match: tags.append(match.group(1))
             glosses = [x.text for x in xsense.findall('gloss')]
-            senses.append({"glosses": glosses, "tags": tags})
+            senses.append({"glosses": glosses, "tags": tags or last_tags})
+            last_tags = tags
         entry["senses"] = senses
         entries.append(entry)
     with open(output_filename, 'w', encoding='utf-8') as f:
         json.dump(entries, f, ensure_ascii=False)
+
+if __name__ == "__main__":
+    build()
