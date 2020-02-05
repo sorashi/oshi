@@ -88,22 +88,30 @@ def parse_rules(filename=RULES_FILENAME):
                                       pos_globs))
         return rules
 
-def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None, tags: List[str] = ["*"], role: str = None, path: List = [], verbous=False):
+def grammar_lookup(rules: List[Rule], expression: str, db: database.Database = None,
+                   tags: List[str] = ["*"], role: str = None, path: List = [], verbous = False):
     """
     Recursively looks up what form the expression is in
     Top level call: grammar_lookup(rules, expression)
     rules - list of grammar rules to use for lookup
     expression - a conjugated Japanese expression
+    db - a database.Database
     tags - list of glob patterns for possible tags of the expression
-    role - grammatical role of the current expression (for example "plain", "past", or None = any role)
+    role - for example "plain", "past", or None = any role
     path - holds the traversed path to the current expression
+    verbous - whether should print() information about the search
+
+    retruns a tuple (path, database entry) or None if nothing was found
     """
+    if type(db) is not database.Database:
+        raise ValueError("Database invalid")
+
     if len(path) <= 0:
         path = [(expression, " ".join(tags), role)]
     if verbous:
-        print("{}({}, {}, {}):::::::::".format("\t" * (len(path)-1), expression, " ".join(tags), role))
+        print("{}::({}, {}, {})::::".format("\t" * (len(path)-1), expression, " ".join(tags), role))
     if len(path) > 20:
-        raise RuntimeError("Possible recursion loop (limit reached)")
+        raise RuntimeError("Possible recursion loop (depth limit reached)")
     # find applicable rules
     applicable = set()
     for rule in rules:
@@ -112,45 +120,58 @@ def grammar_lookup(rules: List[Rule], expression: str, db:database.Database=None
         if not expression.endswith(rule.pattern):
             continue # skip rules with unmatching pattern
         # take rules that contain a matching tag
-        for tag in tags:
-            # tag is a glob pattern
-            if rule.pos and fnmatch(rule.pos, tag):
-                applicable.add(rule)
+        # the rule has a definitive pos
+        if rule.pos:
+            found = False
+            for tag_glob in tags:
+                if fnmatch(rule.pos, tag_glob):
+                    applicable.add(rule)
+                    found = True
+                    break
+            if found:
+                continue
+        for pos_glob in rule.pos_globs:
+            found = False
+            for tag_glob in tags:
+                if fnmatch(pos_glob, tag_glob):
+                    applicable.add(rule)
+                    found = True
+                    break
+            if found:
                 break
-            elif not rule.pos:
-                for pos in rule.pos_globs:
-                    if fnmatch(pos, tag):
-                        applicable.add(rule)
-                        break
-            else:
-                pass # explicit, so that it is clear
+
     if len(applicable) == 0:
+        # no applicable rules found
         if verbous:
             print("\t"*(len(path)-1) + "dead end")
         return None
     for rule in applicable:
+        # new expression is built by removing the suffix in the pattern and replacing it with
+        # target_pattern, for example 書いてた -> 書いてる
         new_expression = expression[:len(expression)-len(rule.pattern)] + rule.target_pattern
-        # this will be saved in the resulting path
+        # node_representation will be saved in the path list
         node_representation = (new_expression, " ".join(rule.pos_globs[:]), rule.rule)
         if verbous:
             print("\t"*len(path) + str(rule))
         if rule.traget == "plain":
             entry = db.find_exact(new_expression)
             if entry:
+                # this node is the result
                 return path + [node_representation], entry
-        result = grammar_lookup(rules, new_expression, db, rule.pos_globs, rule.traget, path + [node_representation], verbous)
+        result = grammar_lookup(rules, new_expression, db,
+                                rule.pos_globs, rule.traget, path + [node_representation], verbous)
+        # if a result was found we return all the way up from this branch
         if result:
             return result
-    return None # can be shortened
+        # else the next rule branch will be explored
+
+    return None # none of the applicable rules are correct
 
 
 
 if __name__ == "__main__":
-    # for rule in parse_rules():
-    #     print(repr(rule))
     rules = parse_rules()
     db = database.connect()
-    # 書いてた
     path, entry = grammar_lookup(rules, "書いてた", db, verbous=True)
     for i in range(len(path) - 1):
         print("{}{} is {} for {}".format(" "*i, path[i][0], path[i+1][2], path[i+1][0]))
