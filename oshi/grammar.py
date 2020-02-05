@@ -130,23 +130,12 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
             continue # skip rules with unmatching pattern
         # take rules that contain a matching tag
         # the rule has a definitive pos
-        if rule.pos:
-            found = False
-            for tag_glob in tags:
-                if fnmatch(rule.pos, tag_glob):
-                    applicable.append(rule)
-                    found = True
-                    break
-            if found:
-                continue
+        if rule.pos and any(fnmatch(rule.pos, tag_glob) for tag_glob in tags):
+            applicable.append(rule)
+            continue
         for pos_glob in rule.pos_globs:
-            found = False
-            for tag_glob in tags:
-                if fnmatch(pos_glob, tag_glob):
-                    applicable.append(rule)
-                    found = True
-                    break
-            if found:
+            if any(fnmatch(pos_glob, tag_glob) for tag_glob in tags):
+                applicable.append(rule)
                 break
 
     if len(applicable) == 0:
