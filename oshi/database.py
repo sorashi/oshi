@@ -26,6 +26,10 @@ class Database:
         """
         Returns entries that contain the term in any of its fields
         """
+        # if the term is whitespace, return empty
+        if not term.strip():
+            yield from ()
+            return
         # if the term is latin, let's search in meanings
         if re.match(r'^[a-zA-Z\s]+$', term.strip()):
             for entry in self.entries:
