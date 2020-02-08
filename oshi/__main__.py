@@ -2,9 +2,27 @@
 oshi -- Japanese grammar tester
 """
 import threading
+from os import path
 import database
 import grammar
-import itertools
+
+if not path.exists(database.DATABASE_FILENAME):
+    if input("Database not found. Build now? (y/n) ").strip().lower() != "y":
+        exit(0)
+    try:
+        filename = input("Filename (JMdict_e.gz): ").strip() or "JMdict_e.gz"
+        print("Building...")
+        database.build(filename)
+        print("Build complete")
+    except FileNotFoundError:
+        print("Specified file not found.")
+        exit(1)
+    except ValueError:
+        print("Extension not supported")
+        exit(1)
+    except:
+        print("Unknown error")
+        exit(1)
 
 db = None
 def load_database():
