@@ -24,11 +24,19 @@ class Database:
         self.entries = entries
     def search(self, term) -> Iterable:
         """
-        Returns entries that contain the term in its writings
+        Returns entries that contain the term in any of its fields
         """
-        for entry in self.entries:
-            if any(term in writing for writing in entry["writings"]):
-                yield copy.deepcopy(entry)
+        # if the term is latin, let's search in meanings
+        if re.match(r'^[a-zA-Z\s]+$', term.strip()):
+            for entry in self.entries:
+                for sense in entry["senses"]:
+                    if any(term in gloss for gloss in sense["glosses"]):
+                        yield copy.deepcopy(entry)
+        # the term is probably kana, let's search in writings and readings
+        else:
+            for entry in self.entries:
+                if any(term in writing for writing in entry["writings"] + entry["readings"]):
+                    yield copy.deepcopy(entry)
     def find_exact(self, expression, tag_glob="*"):
         """
         Finds and returns the first entry exactly matching expression and returns
@@ -57,7 +65,7 @@ def entry_tostring(entry: dict):
 
 def connect(filename=DATABASE_FILENAME):
     """
-    Loads database and returns a Database object
+    Loads and returns a Database instance
     """
     if not path.exists(filename):
         raise FileNotFoundError("Database file not found: " + filename)

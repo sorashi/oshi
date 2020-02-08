@@ -4,30 +4,37 @@ oshi -- Japanese grammar tester
 import threading
 import database
 import grammar
+import itertools
 
 db = None
 def load_database():
     global db
     db = database.connect()
 
+database_loading = threading.Thread(target=load_database)
+database_loading.start() # start loading database in another thread
+
 def menu_search():
-    print("Type e or q anytime to exit")
+    print("Type e or q at any time to exit")
     while True:
         search = input("search: ").strip()
         if search.lower() in ["e", "q"]:
             return
         results = db.search(search)
+        count = 0
         for result in results:
-            print("{} ({}):".format(", ".join(result["writings"]), ", ".join(result["readings"])))
-            for sense in result["senses"]:
-                print("- " + ", ".join(sense["glosses"]))
+            print(database.entry_tostring(result))
+            # pagination every ten entries
+            if count > 0 and count % 10 == 0 and input("Next page? (y/n) ").strip().lower() != "y":
+                break
+            count += 1
 
 def menu_grammar():
     rules = grammar.parse_rules()
-    print("Grammar mode. Type q or e at any time to exit")
+    print("Type e or q at any time to exit")
     while True:
         expression = input("g>> ").strip()
-        if expression.lower().strip() in ["q", "e"]:
+        if expression.lower().strip() in ["e", "q"]:
             return
         print("Recognizing...")
         path, entry = grammar.lookup(rules, expression, db, verbous=False) or (None, None)
@@ -48,8 +55,6 @@ def menu_grammar():
 def menu_help():
     print("help")
 
-database_loading = threading.Thread(target=load_database)
-database_loading.start() # start loading database in another thread
 print("Welcome to oshi")
 while True:
     print()
