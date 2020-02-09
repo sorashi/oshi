@@ -1,3 +1,6 @@
 {
-	"editor.insertSpaces": false
+  "python.pythonPath": "C:\\Users\\praza\\.virtualenvs\\oshi-oP5ymU3W\\Scripts\\python.exe",
+  "editor.rulers": [80, 100],
+  "python.jediEnabled": false,
+  "python.linting.pylintEnabled": true
 }
