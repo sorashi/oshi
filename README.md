@@ -33,11 +33,22 @@ gramatickou formu. Program nezjistí, zda je zadaný výraz validní gramatický
 tvar. Je proto teoreticky možné zadat uměle zkonstruovaný tvar, který se v
 japonštině nevyskytuje a získat od programu zdánlivě korektní analýzu.
 
+## Test
+Testovací mód používá soubor `learn.txt` s jedním výrazem na každé řádce.
+Program náhodně vybere jeden výraz, zobrazí ho a pak čeká na stisknutí klávesy
+enter. Uživatel si vybaví význam výrazu a stiskne enter. Uživateli je zobrazen
+záznam z databáze a poté zadá, zda-li význam znal, nebo ne (y/n). Pokud ho znal,
+je odebrán ze zkoušených výrazů. Poté zkoušení pokračuje, dokud není seznam
+prázdný.
+
 # Technická dokumentace
+Po spuštění je do paměti načtena databáze ve vedlejším vlákně (zatímco se čeká
+na vstup od uživatele v menu). Po zvolení možnosti se počká na ukončení vlákna.
 ## JMdict
-Soubor JMdict obsahuje data ve formátu XML s kódováním UTF-8. Ve stromě níže
-jsou vypsány elementy, které využívá tento program. Vedle každého elementu je
-zapsán jejich počet (0+ znamená 0 a více, 1 znamená právě 1).
+Soubor [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) od skupiny EDRDG
+obsahuje data japonsko-anglického slovníku ve formátu XML s kódováním UTF-8. Ve
+stromě níže jsou vypsány elementy, které využívá tento program. Vedle každého
+elementu je zapsán jejich počet (0+ znamená 0 a více, 1 znamená právě 1).
 
 - `JMdict` 1
   - `entry` (mnoho) (*záznam*)
@@ -101,9 +112,9 @@ vrací pouze první nález. Složitost je tedy `O(n)`.
 
 ## Gramatika
 Soubor `grammar.rules` obsahuje japonská gramatická pravidla ve zvláštním
-formátu. Autor tohoto formátu a souboru je Tomash Brechko. Formát je popsán
-autorem v komentáři v hlavičce souboru. Pro příklad jednoho z jednodušších
-pravidel:
+formátu. Autor tohoto formátu a souboru je [Tomash
+Brechko](https://github.com/kroki/). Formát je popsán autorem v komentáři v
+hlavičce souboru. Pro příklad je uvedeno jedno z jednodušších pravidel:
 
 `negative 〜アない for plain 〜ウ v5[^r]* v5r vs-c`
 
@@ -118,13 +129,23 @@ Gramatické role (pos/tag) jsou zadány ve formátu
 je lze jednoduše použít pomocí funkce `fnmatch(text, glob) -> bool` z balíku
 `fnmatch` (filename match).
 
+Pro načtení těchto pravidel byl použit regex
+```regex
+^(\S+)\s*(\S*)\s+〜(\S*)\s*(\S*)\s+for\s+(\S*)\s+〜(\S*) +((?:[ \t]*\S+)+)\s*$
+```
+Význam jednotlivých zachytávacích skupin:
+```
+RULE [ROLE] 〜PATTERN [POS] for TARGET 〜TARGET_PATTERN POS_GLOBS
+```
+Výsledkem je instance třídy `grammar.Rule`.
+
 ### Rekurzivní analýza gramatického tvaru
 Analýza probíhá ve funkci `grammar.lookup(rules, expression, db, tags, role,
 path, verbous)`. Role jednotlivých parametrů jsou popsány v dokumentaci ve
 zdrojovém kódu.
 
 Vyhledávání začíná tak, že jsou nalezena všechna zpětně aplikovatelná gramatická
-pravidla, která jsou aplikována a výsledek je znovu rekurzivně prozkoumána.
+pravidla, která jsou aplikována a výsledek je znovu rekurzivně prozkoumán.
 Rekurze končí v bodě, kdy je analyzovaný výraz nalezen v databázi. Jedná se o
 prohledávání do hloubky s udržováním prošlé cesty, která je při prvním nalezení
 řešení vrácena.
@@ -137,7 +158,7 @@ ale v různém pořadí (v programu ale ve skutečnosti dochází k ořezáván�
 na "aplikovatelná pravidla"). Složitost je tedy `O(n*m!)`.
 
 # Testovací příklady
-**search**
+## search
 ```
 vstup: ありえない
 výstup:
@@ -175,7 +196,7 @@ n adj-na: forced compliance, coercion, compulsion
 Next page? (y/n)
 ```
 
-**grammar lookup**
+## grammar lookup
 
 Vyskloňované sloveso
 ```
