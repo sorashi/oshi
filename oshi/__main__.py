@@ -2,6 +2,7 @@
 oshi -- Japanese grammar tester
 """
 import threading
+import random
 from os import path
 import database
 import grammar
@@ -70,16 +71,34 @@ def menu_grammar():
             print("Dictionary entry for: {} {}".format(expression, " ".join(path[-1].pos_globs)))
         print(database.entry_tostring(entry))
 
-def menu_help():
-    print("help")
+def menu_test():
+    if not path.exists('learn.txt'):
+        print('File learn.txt not found. This file should contain a Japanese expression on each line.')
+        input("Press any key to continue...")
+        return
+    vocab = []
+    with open('learn.txt', 'r', encoding='utf-8') as f:
+        vocab = [x.strip() for x in f.readlines()]
+    while len(vocab) > 0:
+        expression = random.choice(vocab)
+        entry = db.find_exact(expression)
+        input("Expression: " + expression)
+        print(database.entry_tostring(entry))
+        answer = input("Did you know this? (y/n) ").strip().lower()
+        if answer in ['e', 'q']:
+            return
+        if answer == "y":
+            vocab.remove(expression)
+        print('\n')
+    print("Test finished")
 
 print("Welcome to oshi")
 while True:
     print()
     print("menu:")
     print("s - search")
-    print("g - grammar")
-    print("h - help")
+    print("g - grammar lookup")
+    print("t - vocabulary test")
     print("e - exit")
     choice = input(">> ").strip()
 
@@ -91,8 +110,8 @@ while True:
         menu_search()
     elif choice == "g":
         menu_grammar()
-    elif choice == "h":
-        menu_help()
+    elif choice == "t":
+        menu_test()
     elif choice == "e":
         exit(0)
     else:
