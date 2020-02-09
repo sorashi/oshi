@@ -48,7 +48,7 @@ class Database:
         Returns None if no entry was found
         """
         for entry in self.entries:
-            if any(expression == writing for writing in entry["writings"]):
+            if expression in entry["writings"] or expression in entry["readings"]:
                 entry_copy = copy.deepcopy(entry)
                 entry_copy["senses"] = list(
                     filter(lambda sense: any(fnmatch(x, tag_glob)
@@ -117,7 +117,7 @@ def build(filename="JMdict_e.gz", output_filename=DATABASE_FILENAME):
                 if match: tags.append(match.group(1))
             glosses = [x.text for x in xsense.findall('gloss')]
             senses.append({"glosses": glosses, "tags": tags or last_tags})
-            last_tags = tags
+            last_tags = tags or last_tags
         entry["senses"] = senses
         entries.append(entry)
     with open(output_filename, 'w', encoding='utf-8') as f:
