@@ -162,16 +162,3 @@ def lookup(rules: List[Rule], expression: str, db: database.Database = None,
         # else the next rule branch will be explored
 
     return None # none of the applicable rules are correct
-
-if __name__ == "__main__":
-    rules = parse_rules()
-    db = database.connect()
-    expression = "書いてた"
-    path, entry = lookup(rules, expression, db, verbous=True)
-    t = 0
-    for rule in path:
-        print("{}{} is {} for {}".format("  "*t, expression, rule.rule, apply_rule_backward(expression, rule)))
-        expression = apply_rule_backward(expression, rule)
-        t += 1
-    print("Dictionary entry for: {} {}".format(expression, path[-1].pos_globs))
-    print(database.entry_tostring(entry))
