@@ -107,7 +107,7 @@ Vyhledání v databázi obstarávají funkce `database.Database.search(term)` a
 `term`. Složitost je tedy `O(nm)`, kde `n` je počet položek v databázi
 (konstantní) a `m` je délka slova.
 
-`find_exact` hledá `term` pouze v položce `writings` (tak, že se rovnají) a
+`find_exact` hledá `term` položce `writings` a `readings` (tak, že se rovnají) a
 vrací pouze první nález. Složitost je tedy `O(n)`.
 
 ## Gramatika
@@ -150,12 +150,12 @@ Rekurze končí v bodě, kdy je analyzovaný výraz nalezen v databázi. Jedná 
 prohledávání do hloubky s udržováním prošlé cesty, která je při prvním nalezení
 řešení vrácena.
 
-Složitost algoritmu nezáleží na délce vstupních dat, ale na velikosti
-prohledávané databáze a počtu gramatických pravidel, což jsou konstantní
-hodnoty. Pro představu si je však označme jako proměnné - velikost databáze `n`,
-počet pravidel `m`. V každé větvi může být každé pravidlo použito jenom jednou,
-ale v různém pořadí (v programu ale ve skutečnosti dochází k ořezávání omezením
-na "aplikovatelná pravidla"). Složitost je tedy `O(n*m!)`.
+Složitost algoritmu nezáleží na délce vstupního výrazu (záleží zanedbatelně),
+ale na velikosti prohledávané databáze a počtu gramatických pravidel, což jsou
+konstantní hodnoty. Pro představu si je však označme jako proměnné - velikost
+databáze `n`, počet pravidel `m`. V každé větvi může být každé pravidlo použito
+jenom jednou, ale v různém pořadí (v programu ale ve skutečnosti dochází k
+ořezávání omezením na "aplikovatelná pravidla"). Složitost je tedy `O(n*m!)`.
 
 # Testovací příklady
 ## search
