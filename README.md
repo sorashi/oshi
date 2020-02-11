@@ -10,12 +10,7 @@ Group](http://www.edrdg.org), and are used in conformance with the Group's
 
 Program Oshi je slovník a analyzátor gramatiky pro japonštinu.
 
-Pro spuštění je potřeba Python >=3.6 a balík lxml dostupný z PyPI. Součástí
-programu Oshi je soubor JMdict_e.gz, což je komprimovaný XML soubor obsahující
-japonské výrazy, jejich gramatické role a významy. Při prvním spuštění program
-tento soubor zpracuje a uloží ve formátu JSON do souboru `oshi_database.json`
-(pokud tento soubor ještě neexistuje). Tento soubor je při každém dalším
-spuštění použit jako zdroj dat.
+Pro spuštění je potřeba Python >=3.6 a balík lxml dostupný z PyPI.
 
 Po spuštění si může uživatel vybrat mezi několika módy - vyhledávání ve slovníku
 (search), zjištění gramatického tvaru výrazu (grammar) a zkoušecí mód (test). V
@@ -37,30 +32,39 @@ japonštině nevyskytuje a získat od programu zdánlivě korektní analýzu.
 Testovací mód používá soubor `learn.txt` s jedním výrazem na každé řádce.
 Program náhodně vybere jeden výraz, zobrazí ho a pak čeká na stisknutí klávesy
 enter. Uživatel si vybaví význam výrazu a stiskne enter. Uživateli je zobrazen
-záznam z databáze a poté zadá, zda-li význam znal, nebo ne (y/n). Pokud ho znal,
+záznam z databáze a poté zadá, zdali význam znal, nebo ne (y/n). Pokud ho znal,
 je odebrán ze zkoušených výrazů. Poté zkoušení pokračuje, dokud není seznam
 prázdný.
 
 # Technická dokumentace
-Po spuštění je do paměti načtena databáze ve vedlejším vlákně (zatímco se čeká
-na vstup od uživatele v menu). Po zvolení možnosti se počká na ukončení vlákna.
+Součástí programu Oshi je soubor JMdict_e.gz, což je komprimovaný XML soubor
+obsahující japonské výrazy, jejich gramatické role a významy. Při prvním
+spuštění program tento soubor zpracuje (vybere pouze užitečná data) a uloží ve
+formátu JSON do souboru `oshi_database.json` (pokud tento soubor ještě
+neexistuje). Tento soubor je při každém dalším spuštění použit jako zdroj dat.
+
+Po spuštění programu je do paměti načtena databáze ve vedlejším vlákně (zatímco
+se čeká na vstup od uživatele v menu). Po zvolení uživatelského módu se počká na
+případné ukončení vlákna.
+
 ## JMdict
 Soubor [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) od skupiny EDRDG
-obsahuje data japonsko-anglického slovníku ve formátu XML s kódováním UTF-8. Ve
-stromě níže jsou vypsány elementy, které využívá tento program. Vedle každého
-elementu je zapsán jejich počet (0+ znamená 0 a více, 1 znamená právě 1).
+obsahuje data japonsko-anglického slovníku ve formátu XML s kódováním UTF-8.
 
-- `JMdict` 1
-  - `entry` (mnoho) (*záznam*)
-    - `r_ele` 1+ (*reading element*)
-      - `reb` 1
-    - `k_ele` 0+ (*kanji element*)
-      - `keb` 1
-    - `sense` 1+ (*význam*)
-      - `pos` 0+ (pokud 0, platí `pos` z předchozího `sense`) (*part of speech*)
-      - `gloss` 1+ (*překlad*)
+Ve stromě níže je znázorněna struktura jednoho záznamu z JMdict (zkrácena pouze
+na XML tagy, které používá program Oshi).
 
-Příklad `entry` pro sloveso "psát" (pouze elementy zájmu):
+- tag `<entry>` (*záznam*)
+  - tag `<r_ele>` (*reading element*) (1 a více)
+    - tag `<reb>` (právě 1)
+  - tag `<k_ele>` (*kanji element*) (0 a více)
+    - tag `<keb>` (právě 1)
+  - tag `<sense>` (*význam*) (1 a více)
+    - tag `<pos>` (*part of speech*) (0 a více - pokud 0, platí `pos` z
+      předchozího `sense`)
+    - tag `<gloss>` (*překlad*) (1 a více)
+
+Příklad elementu `entry` pro sloveso "psát" (pouze elementy zájmu):
 ```xml
 <entry>
 <k_ele>
@@ -83,14 +87,15 @@ Příklad `entry` pro sloveso "psát" (pouze elementy zájmu):
 </entry>
 ```
 
-- `k_ele` obsahuje zápis pomocí
+- element `k_ele` obsahuje zápis pomocí
   [kanji](https://cs.wikipedia.org/wiki/Kand%C5%BEi)
-- `r_ele` obsahuje fonetický zápis pomocí
+- element `r_ele` obsahuje fonetický zápis pomocí
   [kany](https://cs.wikipedia.org/wiki/Kana_(p%C3%ADsmo))
-- `pos` je *part of speech* (ve zdrojovém kódu spíše označován jako *tag*, kvůli
-  zobecnění), neboli informace o gramatické roli významu. Tato informace je
-  zapsána pomocí XML entity, např. `&v5k;`. Tyto entity jsou definovány na
-  začátku XML souboru, např. `v5k` znamená *Godan verb with `ku' ending*.
+- element `pos` je *part of speech* (ve zdrojovém kódu spíše označován jako
+  *tag*, kvůli zobecnění), neboli informace o gramatické roli významu. Tato
+  informace je zapsána pomocí XML entity, např. `&v5k;`. Tyto entity jsou
+  definovány na začátku XML souboru, např. `v5k` znamená *Godan verb with `ku'
+  ending*.
 
 ## Databáze ve formátu JSON
 Po zpracování vypadá struktura jednoho záznamu v JSON následovně
@@ -103,14 +108,32 @@ Po zpracování vypadá struktura jednoho záznamu v JSON následovně
 Vyhledání v databázi obstarávají funkce `database.Database.search(term)` a
 `database.Database.find_exact(term)`.
 
-`search` postupně vrátí každý záznam v databázi, který v nějaké položce obsahuje
-`term`. Složitost je tedy `O(nm)`, kde `n` je počet položek v databázi
+`search(term)` postupně vrátí každý záznam v databázi, který v nějaké položce
+obsahuje `term`. Složitost je tedy `O(nm)`, kde `n` je počet položek v databázi
 (konstantní) a `m` je délka slova.
 
-`find_exact` hledá `term` položce `writings` a `readings` (tak, že se rovnají) a
-vrací pouze první nález. Složitost je tedy `O(n)`.
+`find_exact(term)` hledá `term` v položce `writings` a `readings` (tak, že se
+rovnají) a vrací pouze první nález. Složitost je tedy `O(n)`.
+
+## Moduly programu
+Soubor `__main__.py` obsahuje funkce `menu_search()`, `menu_grammar()` a
+`menu_test()`, které obstarávají jednotlivé uživatelské módy.
+
+`database.py` je modul, který se stará o načítání a práci s databází. Funkce
+`database.connect()` vrátí instanci třídy `Database`. Třída `Database` disponuje
+funkcemi `search(term)` a `find_exact(term)` popsanými výše. Funkce
+`database.build()` načte a přestaví XML soubor JMdict na soubor JSON, který
+uloží. Funkce `entry_tostring(entry)` vrátí textovou reprezentaci jednoho
+slovníkového záznamu.
+
+`grammar.py` je modul pro práci s gramatikou - načítaní a reprezentace
+gramatických pravidel (funkce `parse_rules` a třída `Rule`), analýza
+gramatického tvaru (funkce `lookup`), a aplikovaní určitého pravidla na výraz
+(funkce `apply_rule_forward(expression, rule)`)
 
 ## Gramatika
+
+### Gramatická pravidla
 Soubor `grammar.rules` obsahuje japonská gramatická pravidla ve zvláštním
 formátu. Autor tohoto formátu a souboru je [Tomash
 Brechko](https://github.com/kroki/). Formát je popsán autorem v komentáři v
