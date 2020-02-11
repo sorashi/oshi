@@ -100,7 +100,7 @@ while True:
     print("g - grammar lookup")
     print("t - vocabulary test")
     print("e - exit")
-    choice = input(">> ").strip()
+    choice = input(">> ").strip().lower()
 
     if database_loading.is_alive():
         print("Loading database...")
@@ -113,6 +113,6 @@ while True:
     elif choice == "t":
         menu_test()
     elif choice == "e":
-        exit(0)
+        break
     else:
         print("Unknown choice")
